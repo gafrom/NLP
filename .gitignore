@@ -1,3 +1,4 @@
+.ipynb_checkpoints/
 *.pyc
 articles/good.articles
 articles/bad.articles
