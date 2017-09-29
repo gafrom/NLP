@@ -42,13 +42,13 @@ class Corpus(object):
     return data
 
   def _clean(self, string):
-    string = re.sub(r"[^А-Яа-я0-9(),!?\.]", " ", string)
-    string = re.sub(r"\d+(\.|,)?\d*", " number ", string)
-    string = re.sub(r"\.", " . ", string)
-    string = re.sub(r",", " , ", string)
-    string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " \( ", string)
-    string = re.sub(r"\)", " \) ", string)
-    string = re.sub(r"\?", " \? ", string)
-    string = re.sub(r"\s{2,}", " ", string)
+    string = re.sub(r"[^А-Яа-я0-9(),!?.]", " ",     string)
+    string = re.sub(r"\d+(\.|,)?\d*",      " num ", string)
+    string = re.sub(r"\.",                 " . ",   string)
+    string = re.sub(r",",                  " , ",   string)
+    string = re.sub(r"!",                  " ! ",   string)
+    string = re.sub(r"\(",                 " ( ",   string)
+    string = re.sub(r"\)",                 " ) ",   string)
+    string = re.sub(r"\?",                 " ? ",   string)
+    string = re.sub(r"\s{2,}",             " ",     string)
     return string.strip().lower()
