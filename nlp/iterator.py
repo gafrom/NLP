@@ -63,7 +63,6 @@ class BatchIterator(object):
 
   def rewind(self):
     self.current = 0
-    return True
 
   def _state_cleaners(self):
     modifiers = []
