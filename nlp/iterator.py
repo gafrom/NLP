@@ -61,6 +61,10 @@ class BatchIterator(object):
 
     return result
 
+  def rewind(self):
+    self.current = 0
+    return True
+
   def _state_cleaners(self):
     modifiers = []
     previous_label = self.y[0]
