@@ -1,12 +1,10 @@
-import Stemmer
 import re
 
 class Corpus(object):
-  stemmer = Stemmer.Stemmer('russian')
-
   def __init__(self, filename):
     self._filename = filename
     self.length = None
+    self.clener = Cleaner()
 
     self.label    = self._set_label()
     self.raw      = self._load()
@@ -39,22 +37,6 @@ class Corpus(object):
   def _articles(self):
     data = []
     for article in self.raw:
-      words = self._clean(article).split(' ')
-      data.append(self._stem(words))
+      data.append(self.cleaner.words(article))
 
     return data
-
-  def _clean(self, string):
-    string = re.sub(r"[^А-Яа-я0-9(),!?.]", " ",     string)
-    string = re.sub(r"\d+(\.|,)?\d*",      " num ", string)
-    string = re.sub(r"\.",                 " . ",   string)
-    string = re.sub(r",",                  " , ",   string)
-    string = re.sub(r"!",                  " ! ",   string)
-    string = re.sub(r"\(",                 " ( ",   string)
-    string = re.sub(r"\)",                 " ) ",   string)
-    string = re.sub(r"\?",                 " ? ",   string)
-    string = re.sub(r"\s{2,}",             " ",     string)
-    return string.strip().lower()
-
-  def _stem(self, words):
-    return self.stemmer.stemWords(words)
