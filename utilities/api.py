@@ -1,15 +1,18 @@
 from http.server import BaseHTTPRequestHandler
+from nlp.predictor import Predictor
 import json
 
 msg = """
 Welcome to Predictor server
 ===========================\n
-Please, use our API as follows:\n
+Please use our API as follows:\n
 request: POST JSON { text: \"Text of the article\" } to `/predict`
 respond: in plain text containing a predicted article's class
 """
 
 class API(BaseHTTPRequestHandler):
+  predictor = Predictor()
+
   def _set_headers(self):
     self.send_response(200)
     self.send_header('Content-type', 'text/plain')
@@ -25,8 +28,8 @@ class API(BaseHTTPRequestHandler):
       content_length = int(self.headers['Content-Length'])
       raw_data = self.rfile.read(content_length)
       data = json.loads(raw_data)
-      print(data.__class__)
-      self.wfile.write(data['text'].encode('utf-8'))
+      prediction = self.predictor.classify(data['text'])
+      self.wfile.write(prediction.encode('utf-8'))
     else:
       self.send_error(404)
 
