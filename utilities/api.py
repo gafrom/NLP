@@ -1,0 +1,23 @@
+from http.server import BaseHTTPRequestHandler
+import re
+
+msg = """
+Welcome to Predictor server
+===========================\n
+Please, use our API as follows:\n
+request: POST JSON { text: \"Text of the article\" } to `/predict`
+respond: in plain text containing a predicted article's class
+"""
+
+class API(BaseHTTPRequestHandler):
+  def _set_headers(self):
+    self.send_response(200)
+    self.send_header('Content-type', 'text/plain')
+    self.end_headers()
+
+  def do_GET(self):
+    self._set_headers();
+    self.wfile.write(msg.encode("utf-8"))
+
+  def do_HEAD(self):
+    self._set_headers()
