@@ -2,3 +2,5 @@
 *.pyc
 articles/good.articles
 articles/bad.articles
+storage/*
+!storage/.keep
