@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import re
+import json
 
 msg = """
 Welcome to Predictor server
@@ -17,7 +17,18 @@ class API(BaseHTTPRequestHandler):
 
   def do_GET(self):
     self._set_headers();
-    self.wfile.write(msg.encode("utf-8"))
+    self.wfile.write(msg.encode('utf-8'))
+
+  def do_POST(self):
+    if self.path[1:] == 'predict':
+      self._set_headers();
+      content_length = int(self.headers['Content-Length'])
+      raw_data = self.rfile.read(content_length)
+      data = json.loads(raw_data)
+      print(data.__class__)
+      self.wfile.write(data['text'].encode('utf-8'))
+    else:
+      self.send_error(404)
 
   def do_HEAD(self):
     self._set_headers()
