@@ -32,21 +32,23 @@
 class BatchIterator(object):
   def __init__(self, size, a, b, vec_a, vec_b):
     self.size = size
-    self.current = 0
+    self.current_step = 0
     self.x = [item for x, y in zip(a, b) for item in x + y]
     self.y = [item for x, y in zip(a, b) for item in [vec_a for _ in x] + [vec_b for _ in y]]
-    self.z = self._state_cleaners()
+    self.z = self._state_clearers()
+    self._crop()
     self.length = len(self.x)
 
   def __iter__(self):
     return self
 
   def __next__(self):
-    if self.current * self.size > self.length:
+    current_index = self.current_step * self.size
+
+    if current_index >= self.length:
       raise StopIteration
     else:
-      current_index = self.current * self.size
-      self.current += 1
+      self.current_step += 1
       return [self.x[current_index:current_index + self.size],
               self.y[current_index:current_index + self.size],
               self.z[current_index:current_index + self.size]]
@@ -56,15 +58,15 @@ class BatchIterator(object):
     try:
       result = self.__next__()
     except StopIteration:
-      self.current = 0
+      self.current_step = 0
       result = self.__next__()
 
     return result
 
   def rewind(self):
-    self.current = 0
+    self.current_step = 0
 
-  def _state_cleaners(self):
+  def _state_clearers(self):
     modifiers = []
     previous_label = self.y[0]
 
@@ -78,3 +80,10 @@ class BatchIterator(object):
       modifiers.append(modifier)
 
     return modifiers
+
+  def _crop(self):
+    crop_index = len(self.x) % self.size
+    if crop_index == 0: return
+
+    for array in [self.x, self.y, self.z]:
+      array[:] = array[:-crop_index]
