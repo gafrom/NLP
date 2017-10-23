@@ -1,10 +1,14 @@
+from nlp.cleaner import Cleaner
 import re
 
 class Corpus(object):
-  def __init__(self, filename):
-    self._filename = filename
-    self.length = None
-    self.clener = Cleaner()
+  def __init__(self, filename, max_words_per_article=None, min_words_per_article=4):
+    self._filename   = filename
+    self._max_length = max_words_per_article
+    self._min_length = min_words_per_article
+    self._bottom     = self._max_length / 4
+    self.length      = None
+    self.cleaner     = Cleaner()
 
     self.label    = self._set_label()
     self.raw      = self._load()
@@ -21,7 +25,7 @@ class Corpus(object):
     return self.length
 
   def _set_label(self):
-    # set label `good` based on `good.articles` filename pattern
+    # extract label `my_label` from `my_label.articles` filename pattern
     less_extension = re.split('[\.]', self._filename)[-2]
     label = re.split('[\/]', less_extension)[-1]
 
@@ -37,6 +41,25 @@ class Corpus(object):
   def _articles(self):
     data = []
     for article in self.raw:
-      data.append(self.cleaner.words(article))
+      words = self.cleaner.words(article)
+      data += self._split_by_limit(words)
 
     return data
+
+  def _split_by_limit(self, collection):
+    if len(collection) < self._min_length: return []
+    if self._max_length is None: return [collection]
+
+    result = []
+    temp   = []
+    for i, item in enumerate(collection):
+      temp.append(item)
+      if item == '.' and i > (len(result) + 1) * self._max_length:
+        if len(collection) - i < self._bottom:
+          temp += collection[i + 1:]
+          break
+        result.append(temp)
+        temp = []
+    result.append(temp)
+
+    return result
