@@ -1,7 +1,7 @@
 .ipynb_checkpoints/
 *.pyc
-articles/good.articles
-articles/bad.articles
+articles/*
+!articles/*.rb
 storage/*
 !storage/.keep
 tmp
