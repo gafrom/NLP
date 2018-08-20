@@ -2,6 +2,8 @@ from pathlib import Path
 import pickle
 
 class Dictionary(object):
+  UNK = 'UNK'
+
   def __init__(self, path):
     self.path = path
 
@@ -11,5 +13,5 @@ class Dictionary(object):
       with open(dictionary_file_name, 'rb') as fp:
         return pickle.load(fp)
     else:
-      msg = f"Cannot find stored dictionary file: {dictionary_file_name}"
+      msg = f"Cannot find stored dictionary file 😱: {dictionary_file_name}"
       raise FileNotFoundError(msg)
