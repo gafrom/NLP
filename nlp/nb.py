@@ -5,6 +5,7 @@ import math
 
 class NBClassifier(object):
   VOCABULARY_SIZE = 50000
+  ALLOWED_DISCREPANCY = 0.1
 
   def __init__(self):
     self.cleaner = Cleaner()
@@ -29,6 +30,9 @@ class NBClassifier(object):
 
     self.term_freq_by_class = np.array(term_freq_by_class)
     self.prob_Ck = 1 / len(self.term_freq_by_class)
+
+    self.remove_highly_correlated_features()
+    self.remove_stop_words()
 
   def predict(self, text):
     assert self.prob_Ck, 'Cannot infer - model should be trained first.'
@@ -97,3 +101,35 @@ class NBClassifier(object):
   def build_term_frequencies(self, count):
     assert self.dictionary, 'Cannot count words - a dictionary should be build first.'
     return { self.dictionary[key]:value for key, value in count if key in self.dictionary }
+
+  def remove_highly_correlated_features(self):
+    to_be_removed = []
+
+    for token in self.term_freq.keys():
+      freqs = [freq[token] for freq in self.term_freq_by_class]
+
+      # TODO: extrapolate for multinomial classifier
+      if abs(freqs[0] - freqs[1]) / self.term_freq[token] < self.ALLOWED_DISCREPANCY:
+        to_be_removed.append((token, freqs))
+
+    for token, freqs in to_be_removed:
+      word = self.reverse_dictionary[token]
+      print(f"Removing word {word} for {freqs}")
+      self.dictionary.pop(word, None)
+      self.reverse_dictionary.pop(token, None)
+      self.term_freq.pop(token, None)
+      for term_freq in self.term_freq_by_class:
+        term_freq.pop(token, None)
+
+
+  def remove_stop_words(self):
+    to_be_removed = [token for token in self.term_freq.keys() if self.term_freq[token] > 5000]
+
+    for token in to_be_removed:
+      word = self.reverse_dictionary[token]
+      print(f"Removing stop word {word}")
+      self.dictionary.pop(word, None)
+      self.reverse_dictionary.pop(token, None)
+      self.term_freq.pop(token, None)
+      for term_freq in self.term_freq_by_class:
+        term_freq.pop(token, None)
