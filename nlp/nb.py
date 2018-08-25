@@ -5,7 +5,7 @@ import math
 
 class NBClassifier(object):
   VOCABULARY_SIZE = 50000
-  ALLOWED_DISCREPANCY = 0.1
+  CORRELATION_LIMIT = 0.1
 
   def __init__(self):
     self.cleaner = Cleaner()
@@ -109,7 +109,7 @@ class NBClassifier(object):
       freqs = [freq[token] for freq in self.term_freq_by_class]
 
       # TODO: extrapolate for multinomial classifier
-      if abs(freqs[0] - freqs[1]) / self.term_freq[token] < self.ALLOWED_DISCREPANCY:
+      if abs(freqs[0] - freqs[1]) / self.term_freq[token] < self.CORRELATION_LIMIT:
         to_be_removed.append((token, freqs))
 
     for token, freqs in to_be_removed:
