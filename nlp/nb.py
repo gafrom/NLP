@@ -48,21 +48,23 @@ class NBClassifier(object):
 # private --------------------------------------------------------------------------
 
   def infer_from(self, tokens):
-    prob_Ck_given_x = self.prob_Ck * self.likelihood(tokens) / self.evidence(tokens)
-    return self.result_class(np.argmax(prob_Ck_given_x), prob_Ck_given_x)
+    log_prob_Ck_given_x = \
+      math.log(self.prob_Ck) + self.log_likelihood(tokens) - math.log(self.evidence(tokens))
+
+    return self.result_class(np.argmax(log_prob_Ck_given_x), log_prob_Ck_given_x)
 
   # prob_x_given_Ck
-  def likelihood(self, tokens):
-    likelihoods = []
+  def log_likelihood(self, tokens):
+    log_likelihoods = []
     for class_index, tf in enumerate(self.tf_by_class):
-      prob_numerators  = np.vectorize(self.smoothed(tf))(tokens)
+      prob_numerators  = np.vectorize(self.smoothed(tf))(tokens) if tokens else np.empty(0)
       prob_denominator = self.prob_denominators[self.strategy][class_index]
       probs = prob_numerators / prob_denominator
 
-      probability = math.exp(np.sum(np.log(probs)))
-      likelihoods.append(probability)
+      log_prob = np.sum(np.log(probs))
+      log_likelihoods.append(log_prob)
 
-    return np.array(likelihoods)
+    return np.array(log_likelihoods)
 
   def prepare_for_laplace_smoothing(self, term_freq):
     for token in self.tf.keys():
@@ -117,15 +119,15 @@ class NBClassifier(object):
     to_be_removed = []
 
     for token in self.tf.keys():
-      freqs = [freq[token] for freq in self.tf_by_class]
+      tfs = [tf[token] for tf in self.tf_by_class]
 
       # TODO: extrapolate for multinomial classifier
-      if abs(freqs[0] - freqs[1]) / self.tf[token] < self.CORRELATION_LIMIT:
-        to_be_removed.append((token, freqs))
+      if abs(tfs[0] - tfs[1]) / self.tf[token] < self.CORRELATION_LIMIT:
+        to_be_removed.append((token, tfs))
 
-    for token, freqs in to_be_removed:
+    for token, tfs in to_be_removed:
       word = self.reverse_dictionary[token]
-      print(f"Removing word {word} for {freqs}")
+      print(f"Removing word {word} for {tfs}")
       self.dictionary.pop(word, None)
       self.reverse_dictionary.pop(token, None)
       self.tf.pop(token, None)
