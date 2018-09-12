@@ -1,5 +1,6 @@
 import collections
 from nlp.cleaner import Cleaner
+from nlp.tfidfer import TFIDFer
 import numpy as np
 import math
 import functools as fn
@@ -10,9 +11,11 @@ class NBClassifier(object):
   TF_STRATEGY    = 'tf'
   TFIDF_STRATEGY = 'tfidf'
 
-  def __init__(self, strategy = TFIDF_STRATEGY, cleaner = Cleaner()):
+  def __init__(self, strategy = TFIDF_STRATEGY, cleaner = Cleaner(), tfidfer_class = TFIDFer):
     self.strategy = strategy
     self.cleaner  = cleaner
+    self.tfidfer_class = tfidfer_class
+    self.tfidefer    = None
     self.dictionary  = None
     self.prob_Ck     = None
     self.tf          = None
@@ -22,11 +25,16 @@ class NBClassifier(object):
     self.result_class = collections.namedtuple('NaiveBayesClassifierResult', ('label', 'probs'))
 
   def train(self, labeled_documents):
-    self.build_dictionary(labeled_documents)
+    documents_as_words = self.documents_as_words(labeled_documents)
+    self.build_dictionary(documents_as_words)
+    self.tfidfer = self.tfidfer_class(self.dictionary, self.reverse_dictionary)
+    self.tf = self.tfidfer.compute_tf(documents_as_words)
+    self.once = 1 / (sum(len(x) for x in documents_as_words) / len(labeled_documents))
+
     tf_by_class = []
 
     for _, documents in labeled_documents.groupby('label'):
-      tf = self.compute_tf(self.documents_as_words(documents))
+      tf = self.tfidfer.compute_tf(self.documents_as_words(documents))
       tf_by_class.append(tf)
 
     self.tf_by_class = np.array(tf_by_class)
@@ -35,7 +43,8 @@ class NBClassifier(object):
     self.remove_highly_correlated_features()
     self.remove_stop_words()
 
-    if self.strategy == self.TFIDF_STRATEGY: self.compute_idf(labeled_documents)
+    if self.strategy == self.TFIDF_STRATEGY:
+      self.idf = self.tfidfer.compute_idf(labeled_documents['body'])
     self.compute_prob_denominators()
 
   def predict(self, text):
@@ -88,30 +97,15 @@ class NBClassifier(object):
 
     return [self.dictionary[word] for word in words if word in self.dictionary]
 
-  def build_dictionary(self, documents):
-    documents_as_words = self.documents_as_words(documents)
+  def build_dictionary(self, documents_as_words):
     words = [word for words in documents_as_words for word in words]
     count = collections.Counter(words).most_common(self.VOCABULARY_SIZE)
     self.dictionary = dict()
     for word, _ in count: self.dictionary[word] = len(self.dictionary)
     self.reverse_dictionary = dict(zip(self.dictionary.values(), self.dictionary.keys()))
-    self.tf = self.compute_tf(documents_as_words)
-    self.once = 1 / (sum(len(x) for x in documents_as_words) / len(documents))
 
   def documents_as_words(self, documents):
     return [self.cleaner.words(document) for document in documents['body']]
-
-  # here we use advanced definition of Term Frequence:
-  # raw count of a term in a document adjusted for document length
-  def compute_tf(self, documents):
-    tf = collections.defaultdict(int)
-
-    for words in documents:
-      for word in (x for x in words if x in self.dictionary):
-        # tf[self.dictionary[word]] += 1
-        tf[self.dictionary[word]] += 1 / len(words)
-
-    return tf
 
   def remove_highly_correlated_features(self):
     to_be_removed = []
@@ -143,22 +137,6 @@ class NBClassifier(object):
       self.tf.pop(token, None)
       for tf in self.tf_by_class:
         tf.pop(token, None)
-
-  def compute_idf(self, labeled_documents):
-    df = collections.defaultdict(int)
-
-    tokenized_documents = []
-    for document in labeled_documents['body']:
-      doc = { self.dictionary[word] for word in self.cleaner.words(document) if word in self.dictionary }
-      tokenized_documents.append(doc)
-
-    print(f"Tokenized {len(tokenized_documents)} documents")
-    for key in self.reverse_dictionary.keys():
-      for document in tokenized_documents:
-        if key in document: df[key] += 1
-
-    self.idf = { key: math.log(len(labeled_documents) / df[key]) for key in df.keys() }
-    print('Built IDF')
 
   def compute_prob_denominators(self):
     # `self.once` are needed to account for Laplace smoothing
