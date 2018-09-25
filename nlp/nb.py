@@ -7,7 +7,7 @@ import functools as fn
 
 class NBClassifier(object):
   VOCABULARY_SIZE = 50000
-  CORRELATION_LIMIT = 0.1
+  CORRELATION_LIMIT = 0.03
   TF_STRATEGY    = 'tf'
   TFIDF_STRATEGY = 'tfidf'
 
@@ -45,6 +45,7 @@ class NBClassifier(object):
 
     if self.strategy == self.TFIDF_STRATEGY:
       self.idf = self.tfidfer.compute_idf(labeled_documents['body'])
+      self.remove_zero_idf_words()
     self.compute_prob_denominators()
 
   def predict(self, text):
@@ -66,6 +67,7 @@ class NBClassifier(object):
     log_likelihoods = []
     for class_index, tf in enumerate(self.tf_by_class):
       prob_numerators  = np.vectorize(self.smoothed(tf))(tokens) if tokens else np.empty(0)
+      if np.any(prob_numerators == 0): import pdb; pdb.set_trace()
       prob_denominator = self.prob_denominators[self.strategy][class_index]
       probs = prob_numerators / prob_denominator
 
@@ -117,14 +119,18 @@ class NBClassifier(object):
       if abs(tfs[0] - tfs[1]) / self.tf[token] < self.CORRELATION_LIMIT:
         to_be_removed.append((token, tfs))
 
+    msg = []
+
     for token, tfs in to_be_removed:
       word = self.reverse_dictionary[token]
-      print(f"Removing word {word} for {tfs}")
+      msg.append(word)
       self.dictionary.pop(word, None)
       self.reverse_dictionary.pop(token, None)
       self.tf.pop(token, None)
       for tf in self.tf_by_class:
         tf.pop(token, None)
+
+    print(f"Removed highly correlated words: {', '.join(msg)}.")
 
   def remove_stop_words(self):
     to_be_removed = [token for token in self.tf.keys() if self.tf[token] > 5000]
@@ -137,6 +143,18 @@ class NBClassifier(object):
       self.tf.pop(token, None)
       for tf in self.tf_by_class:
         tf.pop(token, None)
+
+  def remove_zero_idf_words(self):
+    to_be_removed = [token for token in self.idf if self.idf[token] == 0]
+    sources_with_tokens = \
+      [self.reverse_dictionary, self.tf, self.idf] + [tf for tf in self.tf_by_class]
+
+    for token in to_be_removed:
+      word = self.reverse_dictionary[token]
+      print(f"Removing word {word} having zero idf")
+      self.dictionary.pop(word, None)
+      for source in sources_with_tokens:
+        source.pop(token, None)
 
   def compute_prob_denominators(self):
     # `self.once` are needed to account for Laplace smoothing
