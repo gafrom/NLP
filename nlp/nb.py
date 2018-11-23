@@ -11,7 +11,8 @@ class NBClassifier(object):
   TF_STRATEGY    = 'tf'
   TFIDF_STRATEGY = 'tfidf'
 
-  def __init__(self, strategy = TFIDF_STRATEGY, cleaner = Cleaner(), tfidfer_class = TFIDFer):
+  def __init__(self, strategy = TFIDF_STRATEGY, cleaner = Cleaner(ngrams_size = 2),
+                     tfidfer_class = TFIDFer):
     self.strategy = strategy
     self.cleaner  = cleaner
     self.tfidfer_class = tfidfer_class
@@ -27,7 +28,7 @@ class NBClassifier(object):
   def train(self, labeled_documents):
     documents_as_words = self.documents_as_words(labeled_documents)
     self.build_dictionary(documents_as_words)
-    self.tfidfer = self.tfidfer_class(self.dictionary, self.reverse_dictionary)
+    self.tfidfer = self.tfidfer_class(self.dictionary, self.reverse_dictionary, self.cleaner)
     self.tf = self.tfidfer.compute_tf(documents_as_words)
     self.once = 1 / (sum(len(x) for x in documents_as_words) / len(labeled_documents))
 
